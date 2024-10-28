@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "buffer": "^6.0.3",
+    "pdfkit": "^0.15.0",
+    "serverless": "^4.4.7"
+  }
+}
