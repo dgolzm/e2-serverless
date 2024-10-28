@@ -17,6 +17,7 @@ provider:
 functions:
   generatePDF:
     handler: handler.generatePDF
+    timeout: 30 # in seconds
     events:
       - http:
           path: generate-pdf

@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const PDFDocument = require('pdfkit');
-const { Buffer } = require('buffer');
+const { Buffer } = require('buffer'); // Asegúrate de importar Buffer
 
 // Inicializar el cliente de S3
 const s3 = new AWS.S3();
@@ -25,63 +25,59 @@ const generatePDF = async (event) => {
 
     // Manejar el flujo del PDF para almacenarlo en un buffer
     doc.on('data', buffers.push.bind(buffers));
+    
+    // Promesa para esperar la finalización del PDF
+    const pdfData = await new Promise((resolve, reject) => {
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(buffers);
+        if (pdfBuffer.length === 0) {
+          reject(new Error('El PDF está vacío o no se generó correctamente'));
+        } else {
+          resolve(pdfBuffer);
+        }
+      });
 
-    doc.on('end', () => {
-      // Concatenar buffers y luego manejar el PDF de manera asíncrona
-      const pdfData = Buffer.concat(buffers);
-      return {
-        statusCode: 200,
-        body: event.body,
-      };
-      // Ejecutar una función asíncrona para manejar la subida a S3
-      // handleUploadToS3(pdfData, userName)
-      //   .then((downloadUrl) => {
-      //     console.log(`Trabajo completado. URL de descarga: ${downloadUrl}`);
-      //   })
-      //   .catch((error) => {
-      //     console.error('Error subiendo el archivo a S3:', error);
-      //   });
+      doc.on('error', (error) => {
+        reject(new Error('Error durante la generación del PDF: ' + error.message));
+      });
+
+      // Añadir contenido al PDF
+      doc.fontSize(20).text('Boleta de Compra', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(14).text(`Grupo: ${groupName}`);
+      doc.fontSize(14).text(`Usuario: ${userName}`);
+      doc.moveDown();
+      doc.fontSize(14).text(`Información del Partido:`);
+      doc.fontSize(12).text(`Equipo Local: ${fixtureDetails.homeTeam}`);
+      doc.fontSize(12).text(`Equipo Visitante: ${fixtureDetails.awayTeam}`);
+      doc.fontSize(12).text(`Fecha: ${fixtureDetails.date}`);
+
+      // Finalizar el documento
+      doc.end();
     });
-    
-    // Mueve la lógica asíncrona a una función separada
-    const handleUploadToS3 = async (pdfData, userName) => {
-      const bucketName = 'coolgoat-pdf-storage';
-      const key = `boletas/${userName}-${Date.now()}.pdf`;
-    
-      const params = {
-        Bucket: bucketName,
-        Key: key,
-        Body: pdfData,
-        ContentType: 'application/pdf',
-        ACL: 'public-read',
-      };
-    
-      // Subir el archivo PDF a S3
-      await s3.upload(params).promise();
-    
-      // Generar el enlace de descarga
-      const downloadUrl = `https://${bucketName}.s3.amazonaws.com/${key}`;
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ downloadUrl }),
-      };
+    // Configurar los parámetros para almacenar el PDF en S3
+    const bucketName = 'coolgoat-pdf-storage';  // Nombre del bucket que creaste en S3
+    const key = `boletas/${userName}-${Date.now()}.pdf`;
+
+    const params = {
+      Bucket: bucketName,
+      Key: key,
+      Body: pdfData,
+      ContentType: 'application/pdf',
+      ACL: 'public-read', // Permitir acceso público
     };
 
-    // Añadir contenido al PDF
-    doc.fontSize(20).text('Boleta de Compra', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(14).text(`Grupo: ${groupName}`);
-    doc.fontSize(14).text(`Usuario: ${userName}`);
-    doc.moveDown();
-    doc.fontSize(14).text(`Información del Partido:`);
-    doc.fontSize(12).text(`Equipo Local: ${fixtureDetails.homeTeam}`);
-    doc.fontSize(12).text(`Equipo Visitante: ${fixtureDetails.awayTeam}`);
-    doc.fontSize(12).text(`Fecha: ${fixtureDetails.date}`);
+    // Subir el archivo PDF a S3
+    await s3.upload(params).promise();
 
-    // Finalizar el documento
+    // Generar el enlace de descarga
+    const downloadUrl = `https://${bucketName}.s3.amazonaws.com/${key}`;
 
-    doc.end();
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ downloadUrl }),
+    };
 
   } catch (error) {
     // Registrar detalles completos del error
@@ -92,7 +88,7 @@ const generatePDF = async (event) => {
       body: JSON.stringify({
         error: 'Error generando la boleta PDF',
         message: error.message,
-        stack: error.stack
+        stack: error.stack,
       }),
     };
   }
@@ -100,6 +96,5 @@ const generatePDF = async (event) => {
 
 // Exportar la función para AWS Lambda
 module.exports = {
-  generatePDF
+  generatePDF,
 };
-
