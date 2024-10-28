@@ -11,58 +11,80 @@ authorName: 'Serverless, Inc.'
 authorAvatar: 'https://avatars1.githubusercontent.com/u/13742415?s=200&v=4'
 -->
 
-# Serverless Framework AWS NodeJS Example
+# Serverless Framework AWS NodeJS
 
-This template demonstrates how to deploy a simple NodeJS function running on AWS Lambda using the Serverless Framework. The deployed function does not include any event definitions or any kind of persistence (database). For more advanced configurations check out the [examples repo](https://github.com/serverless/examples/) which include use cases like API endpoints, workers triggered by SQS, persistence with DynamoDB, and scheduled tasks. For details about configuration of specific events, please refer to our [documentation](https://www.serverless.com/framework/docs/providers/aws/events/).
+Esta documentación muestra como se utiliza Serverless para el ofrecimiento de un servicio de generación de boletas en archivos PDF desde AWS Lambda.
 
-## Usage
+## Uso
 
 ### Deployment
 
-In order to deploy the example, you need to run the following command:
+Una vez instalado serverless, para poder hacer el deploy correctamente se debe correr el siguiente comando:
 
 ```
 serverless deploy
 ```
 
-After running deploy, you should see output similar to:
+La respuesta esperada es la siguiente:
 
 ```
-Deploying "aws-node" to stage "dev" (us-east-1)
+Deploying "pdf-generator-service" to stage "dev" (us-east-1)
 
-✔ Service deployed to stack aws-node-dev (90s)
+✔ Service deployed to stack pdf-generator-service-dev (58s)
 
+endpoint: POST - https://q6cwp910i7.execute-api.us-east-1.amazonaws.com/dev/generate-pdf
 functions:
-  hello: aws-node-dev-hello (1.5 kB)
+  generatePDF: pdf-generator-service-dev-generatePDF (30 MB)
 ```
 
-### Invocation
+### Invoke
 
-After successful deployment, you can invoke the deployed function by using the following command:
-
-```
-serverless invoke --function hello
-```
-
-Which should result in response similar to the following:
+Para poder llamar a la función se le debe proporcionar una request cuyo body debe lucir así (por ejemplo):
 
 ```json
 {
-  "statusCode": 200,
-  "body": "{\"message\":\"Go Serverless v4.0! Your function executed successfully!\"}"
+  "userName": "Juan Perez",
+  "groupName": "Grupo 3",
+  "fixtureDetails": {
+    "homeTeam": "Team A",
+    "awayTeam": "Team B",
+    "date": "2024-09-30T22:00:00.000Z"
+  }
 }
 ```
+Podemos hacer esta request directamente desde bash con el siguiente comando
 
-### Local development
 
-The easiest way to develop and test your function is to use the Serverless Framework's `dev` command:
+```bash
+curl -X POST https://q6cwp910i7.execute-api.us-east-1.amazonaws.com/dev/generate-pdf -H "Content-Type: application/json" -d '{
+  "userName": "Juan Perez",
+  "groupName": "Grupo A",
+  "fixtureDetails": {
+    "homeTeam": "Team A",
+    "awayTeam": "Team B",
+    "date": "2024-09-30T22:00:00.000Z"
+  }
+}'
+```
+
+Donde el enlace https://q6cwp910i7.execute-api.us-east-1.amazonaws.com/dev/generate-pdf se debe reemplazar de acuerdo al endpoint retornado al hacer el deploy. La respuesta esperada debería verse algo así:
 
 ```
-serverless dev
+{"downloadUrl":"https://coolgoat-pdf-storage.s3.amazonaws.com/boletas/Juan%20Perez-1730136053051.pdf?AWSAccessKeyId=ASIATBRPQHJMSZK7SQUZ&Expires=1730139653&Signature=M4DclgcOKkhMaXtQFVpMUBN3Py0%3D&X-Am... (enlace es GIGANTE)
 ```
 
-This will start a local emulator of AWS Lambda and tunnel your requests to and from AWS Lambda, allowing you to interact with your function as if it were running in the cloud.
+El cual de acuerdo a las configuraciones definidas en `handler.js` es un enlace válido por 1 hora, y muestra un archivo PDF disponible para descarga con la información entregada en la request.
 
-Now you can invoke the function as before, but this time the function will be executed locally. Now you can develop your function locally, invoke it, and see the results immediately without having to re-deploy.
+## Explicación de archivos
 
-When you are done developing, don't forget to run `serverless deploy` to deploy the function to the cloud.
+### `handler.js`
+
+El archivo `handler.js` contiene la lógica de la función que se ejecutará en AWS Lambda. La función es responsable de generar un PDF con la información proporcionada, subirlo a un bucket de S3 y devolver un enlace de descarga. Utiliza 3 librerías:
+
+- `AWS SDK`: Para interactuar con S3
+- `PDFKit`: Para la generación del archivo PDF
+- `Buffer`: Para el manejo de datos del archivo antes de subirse al bucket S3.
+
+### `serverless.yml`
+
+Este archivo define cómo se va a desplegar la función en AWS Lambda usando *Serverless Framework*. Sirve esencialmente para definir la infraestructura y el despliegue de nuestra función sin tener que configurar manualmente cada recurso.
