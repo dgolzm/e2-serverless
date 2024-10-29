@@ -11,11 +11,7 @@ const generatePDF = async (event) => {
       throw new Error('No se recibió ningún cuerpo en la solicitud (body es undefined)');
     }
 
-    const { userName, groupName, fixtureDetails } = JSON.parse(event.body);
-
-    if (!userName || !groupName || !fixtureDetails) {
-      throw new Error('Faltan datos en el body de la solicitud');
-    }
+    const { datetime, fixture_id, league_name, odds_name, quantity, round, username, email } = JSON.parse(event.body);
 
     const doc = new PDFDocument();
     let buffers = [];
@@ -41,12 +37,16 @@ const generatePDF = async (event) => {
       doc.fontSize(20).text('Boleta de Compra', { align: 'center' });
       doc.moveDown();
       doc.fontSize(14).text(`Grupo: 3`);
-      doc.fontSize(14).text(`Usuario: ${userName}`);
+      doc.fontSize(14).text(`Usuario: ${username}`);
+      doc.fontSize(14).text(`Email: ${email}`);
       doc.moveDown();
-      doc.fontSize(14).text(`Información del Partido:`);
-      doc.fontSize(12).text(`Equipo Local: ${fixtureDetails.homeTeam}`);
-      doc.fontSize(12).text(`Equipo Visitante: ${fixtureDetails.awayTeam}`);
-      doc.fontSize(12).text(`Fecha: ${fixtureDetails.date}`);
+      doc.fontSize(14).text(`Información del Bono:`);
+      doc.fontSize(12).text(`Fixture ID: ${fixture_id}`);
+      doc.fontSize(12).text(`Liga: ${league_name}`);
+      doc.fontSize(12).text(`Ronda: ${round}`);
+      doc.fontSize(12).text(`Resultado: ${odds_name}`);
+      doc.fontSize(12).text(`Cantidad de bonos: ${quantity}`)
+      doc.fontSize(12).text(`Fecha: ${datetime}`);
 
       doc.end();
     });
