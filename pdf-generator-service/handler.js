@@ -7,11 +7,13 @@ const s3 = new AWS.S3();
 
 const generatePDF = async (event) => {
   try {
-    if (!event.body) {
-      throw new Error('No se recibió ningún cuerpo en la solicitud (body es undefined)');
-    }
+    // if (!event.body) {
+    //   throw new Error('No se recibió ningún cuerpo en la solicitud (body es undefined)');
+    // }
 
-    const { datetime, fixture_id, league_name, odds_name, quantity, round, username, email } = JSON.parse(event.body);
+    console.log("Event", event);
+
+    const { datetime, fixture_id, league_name, result, odds_name, quantity, round, seller, username, email } = JSON.parse(event);
 
     const doc = new PDFDocument();
     let buffers = [];
@@ -44,15 +46,17 @@ const generatePDF = async (event) => {
       doc.fontSize(12).text(`Fixture ID: ${fixture_id}`);
       doc.fontSize(12).text(`Liga: ${league_name}`);
       doc.fontSize(12).text(`Ronda: ${round}`);
-      doc.fontSize(12).text(`Resultado: ${odds_name}`);
+      doc.fontSize(12).text(`Tipo de resultado: ${odds_name}`);
+      doc.fontSize(12).text(`Resultado: ${result}`);
       doc.fontSize(12).text(`Cantidad de bonos: ${quantity}`)
+      doc.fontSize(12).text(`ID Vendedor: ${seller}`);
       doc.fontSize(12).text(`Fecha: ${datetime}`);
 
       doc.end();
     });
 
     const bucketName = 'coolgoat-pdf-storage';  // Nombre del bucket de S3
-    const key = `boletas/${userName}-${Date.now()}.pdf`;
+    const key = `boletas/${username}-${Date.now()}.pdf`;
 
     const params = {
       Bucket: bucketName,
