@@ -73,6 +73,7 @@ const generatePDF = async (event) => {
       Bucket: bucketName,
       Key: key,
       Expires: 60 * 60, // URL expira 1 hora después de ser generada
+      ResponseContentDisposition: 'attachment'
     };
 
     const downloadUrl = s3.getSignedUrl('getObject', signedUrlParams);
